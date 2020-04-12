@@ -23,7 +23,7 @@ def loadData() : DataFrame = {
 
     val scaler ={ new StandardScaler()
         .setInputCol("vfeatures")
-        .setOutputCol("scaled")
+        .setOutputCol("features")
         .setWithStd(true)
         .setWithMean(false)
     }
@@ -33,16 +33,17 @@ def loadData() : DataFrame = {
 
     val scaled = scalerModel.transform(assembled).drop("vfeatures")
 
-    val secondAssembler = {new VectorAssembler()
-        .setInputCols(Array("scaled","Time"))
-        .setOutputCol("features")
-    }
-
-    val cleaned = {secondAssembler.transform(scaled)
-        .drop("Time", "scaled")
-    }
-
-    return cleaned
+    return scaled
+    //val secondAssembler = {new VectorAssembler()
+    //    .setInputCols(Array("scaled","Time"))
+    //    .setOutputCol("features")
+    //}
+//
+    //val cleaned = {secondAssembler.transform(scaled)
+    //    .drop("Time", "scaled")
+    //}
+//
+    //return cleaned
 }
 
 def trainModel(trainData: DataFrame, iterations: Int, tol: Double) : LogisticRegressionModel = {
@@ -66,10 +67,20 @@ def RunMetrics(theModel: LogisticRegressionModel, validData: DataFrame){
 
     //1 is best
     println("Validation:")
-    val validSummary = model.evaluate(validData)
+    val validSummary = theModel.evaluate(validData)
     validSummary.fMeasureByLabel.zipWithIndex.foreach { case (f, label) =>
       println(s"\tF1-Score($label) = $f")
     }
+}
+
+def resample(theData: DataFrame, ratio: Double) : DataFrame = {
+    val pos = theData.filter(r => r(1) == 1)
+    val neg = theData.filter(r => r(1) == 0)
+    val p_count = pos.count()
+    val n_count = neg.count()
+    val frac = (p_count * ratio) / n_count
+    val sampled = neg.sample(false, frac, 11L)
+    return sampled.union(pos)
 }
 
 val data = loadData()
@@ -77,5 +88,7 @@ val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
 val training = splits(0)
 val validation = splits(1)
 
-val model = trainModel(training, 20, 1e-300)
+val trainResample = resample(training, .97)
+
+val model = trainModel(trainResample, 100, 1e-6)
 RunMetrics(model, validation)
