@@ -18,32 +18,10 @@ def loadData() : DataFrame = {
 
     val assembler = {new VectorAssembler()
         .setInputCols(vCols)
-        .setOutputCol("vfeatures")
-    }
-
-    val scaler ={ new StandardScaler()
-        .setInputCol("vfeatures")
         .setOutputCol("features")
-        .setWithStd(true)
-        .setWithMean(false)
     }
 
-    val assembled = assembler.transform(rawDf).drop(vCols:_*)
-    val scalerModel = scaler.fit(assembled)
-
-    val scaled = scalerModel.transform(assembled).drop("vfeatures")
-
-    return scaled
-    //val secondAssembler = {new VectorAssembler()
-    //    .setInputCols(Array("scaled","Time"))
-    //    .setOutputCol("features")
-    //}
-//
-    //val cleaned = {secondAssembler.transform(scaled)
-    //    .drop("Time", "scaled")
-    //}
-//
-    //return cleaned
+    return assembler.transform(rawDf).drop(vCols:_*)
 }
 
 def trainModel(trainData: DataFrame, iterations: Int, tol: Double) : LogisticRegressionModel = {
