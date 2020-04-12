@@ -77,5 +77,5 @@ val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
 val training = splits(0)
 val validation = splits(1)
 
-val model = trainModel(training, 20, 1e-400)
+val model = trainModel(training, 20, 1e-300)
 RunMetrics(model, validation)
