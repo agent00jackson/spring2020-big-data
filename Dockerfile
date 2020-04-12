@@ -4,14 +4,23 @@ RUN conda update -n base -c defaults conda
 RUN apt-get update -y
 RUN apt-get install openjdk-8-jdk -y
 RUN apt-get install wget -y
+RUN apt-get install git -y
+RUN apt-get install libatlas3-base libopenblas-base -y
+
+#RUN wget https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
+#RUN tar -xzf apache-maven-3.6.3-bin.tar.gz
+#RUN mv apache-maven-3.6.3-bin /opt/maven-3.6.3
+#RUN ln -s /opt/maven-3.6.3 /opt/maven
+#ENV PATH="/opt/maven/bin:$PATH"
 
 RUN conda install python=3.7
 RUN conda install pip -y
 RUN conda install -c bioconda scala
 
-RUN wget http://www.gtlib.gatech.edu/pub/apache/spark/spark-3.0.0-preview2/spark-3.0.0-preview2-bin-hadoop3.2.tgz
-RUN tar -xzf spark-3.0.0-preview2-bin-hadoop3.2.tgz
-RUN mv spark-3.0.0-preview2-bin-hadoop3.2 /opt/spark-3.0.0
+RUN git clone https://github.com/apache/spark.git /opt/spark-3.0.0 \
+&& cd /opt/spark-3.0.0 \
+&& git checkout tags/v3.0.0-preview2
+RUN cd /opt/spark-3.0.0 && build/mvn -DskipTests -Pnetlib-lgpl clean package
 RUN ln -s /opt/spark-3.0.0 /opt/spark
 ENV SPARK_HOME="/opt/spark"
 ENV PATH="/opt/spark/bin:$PATH"
