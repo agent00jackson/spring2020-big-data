@@ -6,6 +6,14 @@ RUN apt-get install openjdk-8-jdk -y
 RUN apt-get install wget -y
 RUN apt-get install git -y
 RUN apt-get install libatlas3-base libopenblas-base -y
+RUN apt-get install curl -y
+RUN apt-get install gnupg2 -y
+RUN apt-get install apt-transport-https -y
+
+RUN echo "deb https://dl.bintray.com/sbt/debian /" | tee -a /etc/apt/sources.list.d/sbt.list
+RUN curl -sL "https://keyserver.ubuntu.com/pks/lookup?op=get&search=0x2EE0EA64E40A89B84B2DF73499E82A75642AC823" | apt-key add
+RUN apt-get update
+RUN apt-get install sbt
 
 #RUN wget https://downloads.apache.org/maven/maven-3/3.6.3/binaries/apache-maven-3.6.3-bin.tar.gz
 #RUN tar -xzf apache-maven-3.6.3-bin.tar.gz
