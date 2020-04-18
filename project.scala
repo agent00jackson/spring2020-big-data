@@ -7,6 +7,8 @@ import org.apache.spark.ml.feature.{VectorAssembler, StandardScaler}
 import org.apache.spark.ml.linalg.Vectors
 import spark.implicits._
 
+import com.iresium.ml.SMOTE
+
 def loadData() : DataFrame = {
     val rawDf = {spark.read.format("csv")
 	.option("header","true")
@@ -39,21 +41,35 @@ def trainModel(trainData: DataFrame, iterations: Int, tol: Double) : LogisticReg
 def RunMetrics(theModel: LogisticRegressionModel, validData: DataFrame){
     val trainingSummary = theModel.binarySummary
     println("Training:")
-    //Good val above .7, perfect = 1, worst = .5
     println(s"\tAUROC: ${trainingSummary.areaUnderROC}")
     println(s"\tIterations: ${trainingSummary.totalIterations}")
+    trainingSummary.fMeasureByLabel.zipWithIndex.foreach { case (f, label) =>
+      println(s"\tF1-Score($label) = $f")
+    }
+    trainingSummary.precisionByLabel.zipWithIndex.foreach { case (f, label) =>
+      println(s"\tPrecision($label) = $f")
+    }
+    trainingSummary.recallByLabel.zipWithIndex.foreach { case (f, label) =>
+      println(s"\tRecall($label) = $f")
+    }
 
-    //1 is best
     println("Validation:")
     val validSummary = theModel.evaluate(validData)
+    println(s"\tAUROC: ${validSummary.areaUnderROC}")
     validSummary.fMeasureByLabel.zipWithIndex.foreach { case (f, label) =>
       println(s"\tF1-Score($label) = $f")
     }
+    validSummary.precisionByLabel.zipWithIndex.foreach { case (f, label) =>
+      println(s"\tPrecision($label) = $f")
+    }
+    validSummary.recallByLabel.zipWithIndex.foreach { case (f, label) =>
+      println(s"\tRecall($label) = $f")
+    }
 }
 
-def resample(theData: DataFrame, ratio: Double) : DataFrame = {
-    val pos = theData.filter(r => r(1) == 1)
-    val neg = theData.filter(r => r(1) == 0)
+def undersample(theData: DataFrame, ratio: Double) : DataFrame = {
+    val pos = theData.filter($"Class" === 1)
+    val neg = theData.filter($"Class" === 0)
     val p_count = pos.count()
     val n_count = neg.count()
     val frac = (p_count * ratio) / n_count
@@ -61,12 +77,36 @@ def resample(theData: DataFrame, ratio: Double) : DataFrame = {
     return sampled.union(pos)
 }
 
+def runSmote(theData: DataFrame) : DataFrame = {
+    val smote = {
+        new SMOTE()
+        .setfeatureCol("features")
+        .setlabelCol("Class")
+        .setbucketLength(100)
+    }
+
+    val smoteModel = smote.fit(theData)
+    return smoteModel.transform(theData)
+}
+
 val data = loadData()
 val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
 val training = splits(0)
 val validation = splits(1)
 
-val trainResample = resample(training, .97)
+val smoted = runSmote(training)
+val trainResample = undersample(smoted, 2)
+val undersamp = undersample(training, .97)
 
-val model = trainModel(trainResample, 100, 1e-6)
-RunMetrics(model, validation)
+val smoteModel = trainModel(trainResample, 10, 1e-6)
+val undModel = trainModel(undersamp, 9, 1e-6)
+val noresampleModel = trainModel(training, 10, 1e-6)
+
+println("Smote + Undersampling:")
+RunMetrics(smoteModel, validation)
+
+println("Undersampling:")
+RunMetrics(undModel, validation)
+
+println("No Resampling:")
+RunMetrics(noresampleModel, validation)
