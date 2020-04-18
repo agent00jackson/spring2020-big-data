@@ -54,7 +54,7 @@ def RunMetrics(theModel: LogisticRegressionModel, validData: DataFrame){
     }
 
     println("Validation:")
-    val validSummary = theModel.evaluate(validData)
+    val validSummary = theModel.evaluate(validData).asBinary
     println(s"\tAUROC: ${validSummary.areaUnderROC}")
     validSummary.fMeasureByLabel.zipWithIndex.foreach { case (f, label) =>
       println(s"\tF1-Score($label) = $f")
