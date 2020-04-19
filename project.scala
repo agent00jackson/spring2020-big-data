@@ -16,7 +16,7 @@ def loadData() : DataFrame = {
 	.load("/files/creditcard.csv")
     }
 
-    val vCols = rawDf.drop("Class").drop("Time").columns
+    val vCols = rawDf.drop("Class").columns
 
     val assembler = {new VectorAssembler()
         .setInputCols(vCols)
