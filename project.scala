@@ -2,9 +2,10 @@ import org.apache.spark.sql._
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
 import org.apache.spark.ml
-import org.apache.spark.ml.classification.{LogisticRegression, LogisticRegressionModel, LogisticRegressionSummary}
+import org.apache.spark.ml.classification._
 import org.apache.spark.ml.feature.{VectorAssembler, StandardScaler}
 import org.apache.spark.ml.linalg.Vectors
+import org.apache.spark.ml.evauluation._
 import spark.implicits._
 
 import com.iresium.ml.SMOTE
@@ -26,7 +27,7 @@ def loadData() : DataFrame = {
     return assembler.transform(rawDf).drop(vCols:_*)
 }
 
-def trainModel(trainData: DataFrame, iterations: Int, tol: Double) : LogisticRegressionModel = {
+def trainLRModel(trainData: DataFrame, iterations: Int, tol: Double) : LogisticRegressionModel = {
     val lr = {new LogisticRegression()
         .setMaxIter(iterations)
         .setRegParam(0.3)
@@ -89,6 +90,23 @@ def runSmote(theData: DataFrame) : DataFrame = {
     return smoteModel.transform(theData)
 }
 
+def trainRFModel(theData: DataFrame) : RandomForestClassificationModel = {
+    val rf = {new RandomForestClassifier()
+        .setLabelCol("Class")
+        .setFeaturesCol("features")
+        .setPredictionCol("prediction")
+        .setSeed(11L)
+    }
+    return rf.fit(theData)
+}
+
+def RunRFMetrics(theModel: RandomForestClassificationModel, theData: DataFrame){
+    val eval = theModel.transform(theData)
+    val multiclasEval = {
+
+    }
+}
+
 val data = loadData()
 val splits = data.randomSplit(Array(0.6, 0.4), seed = 11L)
 val training = splits(0)
@@ -98,10 +116,23 @@ val smoted = runSmote(training)
 val trainResample = undersample(smoted, 2)
 val undersamp = undersample(training, .97)
 
-val smoteModel = trainModel(trainResample, 10, 1e-6)
-val undModel = trainModel(undersamp, 9, 1e-6)
-val noresampleModel = trainModel(training, 10, 1e-6)
+val smoteModel = trainLRModel(trainResample, 10, 1e-6)
+val undModel = trainLRModel(undersamp, 9, 1e-6)
+val noresampleModel = trainLRModel(training, 10, 1e-6)
 
+val rfModel = trainRFModel(training)
+println("---------------")
+println(" Random Forest ")
+println("---------------")
+println("Training:")
+RunRFMetrics(rfModel, training)
+println("Validation:")
+RunRFMetrics(rfModel, validation)
+
+println("")
+println("---------------------")
+println(" Logistic Regression ")
+println("---------------------")
 println("Smote + Undersampling:")
 RunMetrics(smoteModel, validation)
 
